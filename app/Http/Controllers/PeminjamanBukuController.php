@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PeminjamanBuku;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class PeminjamanBukuController extends Controller
 {
@@ -22,14 +23,19 @@ class PeminjamanBukuController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,firebase_uid',
+            'user_id' => 'required|exists:users,firebase_uid', // VALIDASI Firebase UID
             'informasi_buku_id' => 'required|uuid|exists:informasi_buku,id',
             'tanggal_pinjam' => 'required|date',
             'status' => 'required|in:dipinjam,dikembalikan'
         ]);
 
-        // Cek status buku sebelum meminjam
+        // Cari buku
         $buku = \App\Models\InformasiBuku::find($validated['informasi_buku_id']);
+        if (!$buku) {
+            return response()->json([
+                'message' => 'Buku tidak ditemukan!'
+            ], 404);
+        }
 
         if ($buku->status !== 'tersedia') {
             return response()->json([
@@ -37,21 +43,32 @@ class PeminjamanBukuController extends Controller
             ], 400);
         }
 
-        // Buat peminjaman
-        $peminjaman = PeminjamanBuku::create([
-            'user_id' => $validated['user_id'],
-            'informasi_buku_id' => $validated['informasi_buku_id'],
-            'tanggal_pinjam' => $validated['tanggal_pinjam'],
-            'status' => $validated['status']
-        ]);
+        // Jalankan transaction (optional, tapi aman banget)
+        DB::beginTransaction();
+        try {
+            $peminjaman = \App\Models\PeminjamanBuku::create([
+                'user_id' => $validated['user_id'], // SIMPAN FIREBASE UID!
+                'informasi_buku_id' => $validated['informasi_buku_id'],
+                'tanggal_pinjam' => $validated['tanggal_pinjam'],
+                'status' => $validated['status']
+            ]);
 
-        // Update status buku menjadi "dipinjam"
-        $buku->update(['status' => 'dipinjam']);
+            $buku->update(['status' => 'dipinjam']);
 
-        return response()->json([
-            'message' => 'Buku berhasil dipinjam!',
-            'data' => $peminjaman
-        ], 201);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Buku berhasil dipinjam!',
+                'data' => $peminjaman
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat meminjam buku.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
