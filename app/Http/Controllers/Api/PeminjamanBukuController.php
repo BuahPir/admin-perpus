@@ -34,6 +34,8 @@ class PeminjamanBukuController extends Controller
             'tanggal_pinjam' => $request->tanggal_pinjam,
             'status' => $request->status
         ]);
+        \App\Models\InformasiBuku::where('id', $request->informasi_buku_id)
+        ->update(['status' => 'dipinjam']);
 
         return response()->json([
             'message' => 'Buku berhasil dipinjam!',
