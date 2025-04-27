@@ -7,7 +7,6 @@ use App\Http\Controllers\PeminjamanBukuController;
 Route::get('/', function () {
     return view('welcome');
 });
-Route::post('/peminjaman', [PeminjamanBukuController::class, 'store']);
 
 Route::get('/create', [InformasiBukuController::class, 'create'])->name('buku.create');
 // Simpan data buku
