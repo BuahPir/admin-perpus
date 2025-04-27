@@ -22,7 +22,7 @@ class PeminjamanBukuController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|uuid|exists:users,id',
+            'user_id' => 'required|exists:users,firebase_uid',
             'informasi_buku_id' => 'required|uuid|exists:informasi_buku,id',
             'tanggal_pinjam' => 'required|date',
             'status' => 'required|in:dipinjam,dikembalikan'
