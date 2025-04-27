@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PeminjamanBuku;
+use Illuminate\Support\Str;
 
 class PeminjamanBukuController extends Controller
 {
@@ -21,19 +21,32 @@ class PeminjamanBukuController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'user_id' => 'required|uuid|exists:users,id',
             'informasi_buku_id' => 'required|uuid|exists:informasi_buku,id',
             'tanggal_pinjam' => 'required|date',
             'status' => 'required|in:dipinjam,dikembalikan'
         ]);
 
+        // Cek status buku sebelum meminjam
+        $buku = \App\Models\InformasiBuku::find($validated['informasi_buku_id']);
+
+        if ($buku->status !== 'tersedia') {
+            return response()->json([
+                'message' => 'Buku tidak tersedia untuk dipinjam!'
+            ], 400);
+        }
+
+        // Buat peminjaman
         $peminjaman = PeminjamanBuku::create([
-            'user_id' => $request->user_id,
-            'informasi_buku_id' => $request->informasi_buku_id,
-            'tanggal_pinjam' => $request->tanggal_pinjam,
-            'status' => $request->status
+            'user_id' => $validated['user_id'],
+            'informasi_buku_id' => $validated['informasi_buku_id'],
+            'tanggal_pinjam' => $validated['tanggal_pinjam'],
+            'status' => $validated['status']
         ]);
+
+        // Update status buku menjadi "dipinjam"
+        $buku->update(['status' => 'dipinjam']);
 
         return response()->json([
             'message' => 'Buku berhasil dipinjam!',
