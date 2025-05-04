@@ -18,7 +18,7 @@ class AutoReturnBooks extends Command
         // Cari semua peminjaman yang lebih dari 3 hari dan masih berstatus "dipinjam"
         $borrowedBooks = DB::table('peminjaman_buku')
             ->where('status', 'dipinjam')
-            ->where('tanggal_peminjaman', '<=', Carbon::now()->subDays(3))
+            ->where('tanggal_pinjam', '<=', Carbon::now()->subDays(3))
             ->get();
 
         foreach ($borrowedBooks as $peminjaman) {
@@ -26,7 +26,8 @@ class AutoReturnBooks extends Command
             DB::table('peminjaman_buku')
                 ->where('id', $peminjaman->id)
                 ->update([
-                    'status' => 'selesai',
+                    'status' => 'dikembalikan',
+                    'tanggal_kembali' => Carbon::now()->toDateString(),
                 ]);
 
             // Update status buku menjadi tersedia
